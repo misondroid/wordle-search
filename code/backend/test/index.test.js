@@ -4,7 +4,6 @@ import test from "node:test";
 import {
   appendAnswer,
   getDateStringForTimeZone,
-  handleRequest,
   readAnswers,
   updateAnswers,
   writeAnswers,
@@ -28,7 +27,7 @@ test("readAnswers returns an empty array when the object does not exist", async 
 
 test("readAnswers rejects invalid JSON shapes", async () => {
   const bucket = makeBucket({
-    "answers.json": JSON.stringify({ answers: ["smile"] }),
+    "answers.json": await gzipJson({ answers: ["smile"] }),
   });
 
   await assert.rejects(() => readAnswers(bucket), /must contain a JSON array/);
@@ -39,32 +38,22 @@ test("appendAnswer avoids duplicate answers", () => {
   assert.deepEqual(appendAnswer(["smile"], "clang"), ["smile", "clang"]);
 });
 
-test("handleRequest returns JSON 404 while no API endpoints are defined", async () => {
-  const response = await handleRequest(new Request("http://localhost/answers"));
-
-  assert.equal(response.status, 404);
-  assert.equal(response.headers.get("content-type"), "application/json; charset=utf-8");
-  assert.deepEqual(await response.json(), {
-    error: "Not Found",
-    path: "/answers",
-  });
-});
-
-test("writeAnswers stores JSON with application/json metadata", async () => {
+test("writeAnswers stores GZip JSON with application/json metadata", async () => {
   const bucket = makeBucket();
 
   await writeAnswers(bucket, "answers.json", ["smile"]);
 
-  assert.equal(bucket.store.get("answers.json"), "[\n  \"smile\"\n]\n");
+  assert.deepEqual(await gunzipJson(bucket.store.get("answers.json")), ["smile"]);
   assert.equal(
     bucket.metadata.get("answers.json").httpMetadata.contentType,
     "application/json; charset=utf-8",
   );
+  assert.equal(bucket.metadata.get("answers.json").httpMetadata.contentEncoding, "gzip");
 });
 
 test("updateAnswers reads R2, fetches the NYT solution, and writes the new list", async () => {
   const bucket = makeBucket({
-    "answers.json": JSON.stringify(["smile"]),
+    "answers.json": await gzipJson(["smile"]),
   });
   const restoreFetch = stubFetch({
     solution: "CLANG",
@@ -80,7 +69,7 @@ test("updateAnswers reads R2, fetches the NYT solution, and writes the new list"
       Date.parse("2026-05-29T10:00:00.000Z"),
     );
 
-    assert.deepEqual(JSON.parse(bucket.store.get("answers.json")), ["smile", "clang"]);
+    assert.deepEqual(await gunzipJson(bucket.store.get("answers.json")), ["smile", "clang"]);
     assert.deepEqual(result, {
       key: "answers.json",
       date: "2026-05-29",
@@ -106,16 +95,36 @@ function makeBucket(initialObjects = {}) {
       }
 
       return {
-        async json() {
-          return JSON.parse(store.get(key));
-        },
+        body: new Response(store.get(key)).body,
       };
     },
     async put(key, value, options) {
-      store.set(key, value);
+      store.set(key, await normalizeStoredValue(value));
       metadata.set(key, options);
     },
   };
+}
+
+async function normalizeStoredValue(value) {
+  if (value instanceof ReadableStream) {
+    return new Response(value).arrayBuffer();
+  }
+
+  return value;
+}
+
+async function gzipJson(value) {
+  const stream = new Response(`${JSON.stringify(value)}\n`).body.pipeThrough(
+    new CompressionStream("gzip"),
+  );
+
+  return new Response(stream).arrayBuffer();
+}
+
+async function gunzipJson(value) {
+  const stream = new Response(value).body.pipeThrough(new DecompressionStream("gzip"));
+
+  return new Response(stream).json();
 }
 
 function stubFetch(payload, ok = true, status = 200) {
