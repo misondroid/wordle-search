@@ -10,7 +10,15 @@ Frontend の Worker は `code/frontend/wrangler.jsonc` で Vite の `dist` を W
 ```text
 Root directory: code/frontend
 Build command: npm run build
-Deploy command: npx wrangler versions upload
+Deploy command: npx wrangler deploy
+```
+
+Build command を空にしたい場合は、deploy command 側で build まで実行します。
+
+```text
+Root directory: code/frontend
+Build command:
+Deploy command: npm run deploy
 ```
 
 Backend の Worker は `code/backend/wrangler.jsonc` で cron handler と R2 binding を定義します。

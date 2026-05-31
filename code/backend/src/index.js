@@ -3,26 +3,10 @@ const DEFAULT_TIME_ZONE = "America/New_York";
 const WORDLE_API_BASE_URL = "https://www.nytimes.com/svc/wordle/v2";
 
 export default {
-  async fetch(request) {
-    return handleRequest(request);
-  },
-
   async scheduled(controller, env, ctx) {
     ctx.waitUntil(updateAnswers(env, controller.scheduledTime));
   },
 };
-
-export async function handleRequest(request) {
-  const url = new URL(request.url);
-
-  return jsonResponse(
-    {
-      error: "Not Found",
-      path: url.pathname,
-    },
-    { status: 404 },
-  );
-}
 
 export async function updateAnswers(env, scheduledTime = Date.now()) {
   const bucket = getAnswersBucket(env);
@@ -71,7 +55,7 @@ export async function readAnswers(bucket, key = DEFAULT_ANSWERS_KEY) {
     return [];
   }
 
-  const payload = await object.json();
+  const payload = await readGzipJson(object);
 
   if (!Array.isArray(payload)) {
     throw new Error(`${key} must contain a JSON array`);
@@ -115,27 +99,44 @@ export function appendAnswer(answers, answer) {
 }
 
 export async function writeAnswers(bucket, key = DEFAULT_ANSWERS_KEY, answers) {
-  await bucket.put(key, `${JSON.stringify(answers, null, 2)}\n`, {
+  const body = gzipString(`${JSON.stringify(answers)}\n`);
+
+  await bucket.put(key, body, {
     httpMetadata: {
       contentType: "application/json; charset=utf-8",
+      contentEncoding: "gzip",
     },
   });
 }
 
 function getAnswersBucket(env) {
-  if (!env.ANSWERS_BUCKET) {
-    throw new Error("ANSWERS_BUCKET binding is required");
+  const bucket = env.AWSWERS_BUCKET || env.ANSWERS_BUCKET;
+
+  if (!bucket || typeof bucket.get !== "function" || typeof bucket.put !== "function") {
+    throw new Error("AWSWERS_BUCKET or ANSWERS_BUCKET R2 binding is required");
   }
 
-  return env.ANSWERS_BUCKET;
+  return bucket;
 }
 
-function jsonResponse(body, init = {}) {
-  const headers = new Headers(init.headers);
-  headers.set("content-type", "application/json; charset=utf-8");
+function gzipString(value) {
+  return new Response(value).body.pipeThrough(new CompressionStream("gzip"));
+}
 
-  return new Response(`${JSON.stringify(body)}\n`, {
-    ...init,
-    headers,
-  });
+async function readGzipJson(object) {
+  const body = await getObjectBody(object);
+
+  return new Response(body.pipeThrough(new DecompressionStream("gzip"))).json();
+}
+
+async function getObjectBody(object) {
+  if (object.body) {
+    return object.body;
+  }
+
+  if (typeof object.arrayBuffer === "function") {
+    return new Response(await object.arrayBuffer()).body;
+  }
+
+  throw new Error("R2 object body is required");
 }

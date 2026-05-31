@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 3000",
     "build": "tsc && vite build",
+    "deploy": "npm run build && npx wrangler deploy",
+    "upload-version": "npm run build && npx wrangler versions upload",
     "preview-local": "vite preview --host 0.0.0.0 --port 3000"
   },
   "keywords": [
