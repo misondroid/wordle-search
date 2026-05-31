@@ -15,5 +15,20 @@
   "vars": {
     "ANSWERS_KEY": "answers.json",
     "WORDLE_TIME_ZONE": "America/New_York"
+  },
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
   }
 }
