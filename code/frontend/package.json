@@ -1,0 +1,26 @@
+{
+  "name": "word-search-frontend",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Vite SPA for incremental word search",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "tsc && vite build",
+    "preview-local": "vite preview --host 0.0.0.0 --port 3000"
+  },
+  "keywords": [
+    "vite",
+    "spa",
+    "wordle"
+  ],
+  "author": "@misondroid",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^6.4.2"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.2.0"
+  }
+}
