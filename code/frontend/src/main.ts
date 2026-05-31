@@ -72,7 +72,7 @@ app.innerHTML = `
             <span id="ignore-case-label">${copy.ignoreCase}</span>
           </label>
           <label>
-            <input id="global-match-input" type="checkbox" />
+            <input id="global-match-input" type="checkbox" checked />
             <span id="global-match-label">${copy.matchAnywhere}</span>
           </label>
           <button class="option-button" id="copy-url-button" type="button">
