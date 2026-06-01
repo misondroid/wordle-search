@@ -353,7 +353,6 @@ loadObserver.observe(loadSentinel);
 const loadDictionary = async () => {
   try {
     let dictionaryUrl = getDictionaryUrl();
-    console.log("dictionaryUrl=", dictionaryUrl.origin);
     const response = await fetch(dictionaryUrl);
     if (!response.ok) {
       throw new Error(copy.dictionaryLoadFailedStatus(response.status));
@@ -361,7 +360,6 @@ const loadDictionary = async () => {
 
     const dictionary = (await response.json()) as DictionaryPayload;
     words = normalizeDictionary(dictionary);
-    console.log("got words=", words.length);
     runSearch();
   } catch (error) {
     resultsTitle.textContent = copy.dictionaryLoadFailedTitle;
