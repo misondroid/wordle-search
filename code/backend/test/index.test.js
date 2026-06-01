@@ -44,6 +44,7 @@ test("writeAnswers stores GZip JSON with application/json metadata", async () =>
 
   await writeAnswers(bucket, "answers.json", ["smile"]);
 
+  assert.equal(bucket.store.get("answers.json") instanceof ArrayBuffer, true);
   assert.deepEqual(await gunzipJson(bucket.store.get("answers.json")), ["smile"]);
   assert.equal(
     bucket.metadata.get("answers.json").httpMetadata.contentType,

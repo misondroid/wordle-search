@@ -136,7 +136,7 @@ export function appendAnswer(answers, answer) {
 }
 
 export async function writeAnswers(bucket, key = DEFAULT_ANSWERS_KEY, answers) {
-  const body = gzipString(`${JSON.stringify(answers)}\n`);
+  const body = await gzipString(`${JSON.stringify(answers)}\n`);
 
   await bucket.put(key, body, {
     httpMetadata: {
@@ -156,8 +156,10 @@ function getAnswersBucket(env) {
   return bucket;
 }
 
-function gzipString(value) {
-  return new Response(value).body.pipeThrough(new CompressionStream("gzip"));
+async function gzipString(value) {
+  const stream = new Response(value).body.pipeThrough(new CompressionStream("gzip"));
+
+  return new Response(stream).arrayBuffer();
 }
 
 function jsonResponse(payload, init = {}) {
