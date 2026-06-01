@@ -252,8 +252,18 @@ const isGzipResource = (resourceUrl: string) => {
   return url.pathname.endsWith('.gz');
 };
 
+const hasDecodedContentEncoding = (response: Response) => {
+  const contentEncoding = response.headers.get('content-encoding');
+
+  return Boolean(
+    contentEncoding &&
+      contentEncoding.trim() !== '' &&
+      contentEncoding.toLowerCase() !== 'identity',
+  );
+};
+
 const readDictionaryResponse = async (response: Response) => {
-  if (!isGzipResource(DICTIONARY_URL)) {
+  if (!isGzipResource(DICTIONARY_URL) || hasDecodedContentEncoding(response)) {
     return (await response.json()) as DictionaryPayload;
   }
 
