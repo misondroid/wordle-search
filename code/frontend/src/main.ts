@@ -4,9 +4,6 @@ import './style.css';
 
 type DictionaryPayload = Record<string, number> | string[];
 
-const DEFAULT_DICTIONARY_URL = 'base_dictionary.json';
-const DICTIONARY_URL = import.meta.env.DICTIONARY_URL || DEFAULT_DICTIONARY_URL;
-console.log('got DICTIONARY_URL = ', DICTIONARY_URL);
 const DEFAULT_PATTERN = '^.....$';
 const LANGUAGE_STORAGE_KEY = 'word-search-language';
 const RESULT_PAGE_SIZE = 100;
@@ -247,35 +244,6 @@ const normalizeDictionary = (dictionary: DictionaryPayload) => {
   return Object.keys(dictionary);
 };
 
-const isGzipResource = (resourceUrl: string) => {
-  const url = new URL(resourceUrl, window.location.href);
-
-  return url.pathname.endsWith('.gz');
-};
-
-const hasDecodedContentEncoding = (response: Response) => {
-  const contentEncoding = response.headers.get('content-encoding');
-
-  return Boolean(
-    contentEncoding &&
-      contentEncoding.trim() !== '' &&
-      contentEncoding.toLowerCase() !== 'identity',
-  );
-};
-
-const readDictionaryResponse = async (response: Response) => {
-  if (!isGzipResource(DICTIONARY_URL) || hasDecodedContentEncoding(response)) {
-    return (await response.json()) as DictionaryPayload;
-  }
-
-  if (!response.body) {
-    throw new Error(copy.dictionaryLoadFailedTitle);
-  }
-
-  const stream = response.body.pipeThrough(new DecompressionStream('gzip'));
-  return (await new Response(stream).json()) as DictionaryPayload;
-};
-
 const appendResults = () => {
   if (renderedResultCount >= currentMatches.length) {
     loadSentinel.hidden = true;
@@ -376,12 +344,12 @@ loadObserver.observe(loadSentinel);
 
 const loadDictionary = async () => {
   try {
-    const response = await fetch(DICTIONARY_URL);
+    const response = await fetch('base_dictionary.json');
     if (!response.ok) {
       throw new Error(copy.dictionaryLoadFailedStatus(response.status));
     }
 
-    const dictionary = await readDictionaryResponse(response);
+    const dictionary = (await response.json()) as DictionaryPayload;
     words = normalizeDictionary(dictionary);
     runSearch();
   } catch (error) {
