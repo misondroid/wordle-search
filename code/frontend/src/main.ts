@@ -6,6 +6,7 @@ type DictionaryPayload = Record<string, number> | string[];
 
 const DEFAULT_DICTIONARY_URL = 'base_dictionary.json';
 const DICTIONARY_URL = import.meta.env.DICTIONARY_URL || DEFAULT_DICTIONARY_URL;
+console.log('got DICTIONARY_URL = ', DICTIONARY_URL);
 const DEFAULT_PATTERN = '^.....$';
 const LANGUAGE_STORAGE_KEY = 'word-search-language';
 const RESULT_PAGE_SIZE = 100;
