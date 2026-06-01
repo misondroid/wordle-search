@@ -36,7 +36,7 @@ Cloudflare Workers のバッチハンドラーは `code/backend` にあります
 docker compose up backend
 ```
 
-Worker はコンテナ内の `8787` で起動し、ホスト側では `http://localhost:3001` からアクセスできます。現時点では公開 API は定義していないため HTTP リクエストは JSON の 404 を返します。ホスト上で直接 `wrangler` を実行する場合は Node.js 22 以上が必要です。
+Worker はコンテナ内の `8787` で起動し、ホスト側では `http://localhost:3001` からアクセスできます。手動デバッグ用に `POST /debug/scheduled` を定義しており、それ以外の HTTP リクエストは JSON の 404 を返します。ホスト上で直接 `wrangler` を実行する場合は Node.js 22 以上が必要です。
 
 Dockerfile や Node.js の依存関係を変えた後は、匿名 volume の `node_modules` を作り直します。
 
@@ -49,6 +49,12 @@ cron handler をローカルで動かす場合は、backend 起動後に次の U
 
 ```sh
 curl "http://localhost:3001/__scheduled?cron=0+10+*+*+*"
+```
+
+デプロイ済み Worker の HTTP endpoint 経由で同じ更新処理を手動実行する場合は、次の URL に POST します。
+
+```sh
+curl -X POST "http://localhost:3001/debug/scheduled"
 ```
 
 Cloudflare にログインする場合は次を使います。

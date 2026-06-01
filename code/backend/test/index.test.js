@@ -8,6 +8,7 @@ import {
   updateAnswers,
   writeAnswers,
 } from "../src/index.js";
+import worker from "../src/index.js";
 
 test("getDateStringForTimeZone formats the date in the configured time zone", () => {
   const date = new Date("2026-05-30T03:00:00.000Z");
@@ -43,6 +44,7 @@ test("writeAnswers stores GZip JSON with application/json metadata", async () =>
 
   await writeAnswers(bucket, "answers.json", ["smile"]);
 
+  assert.equal(bucket.store.get("answers.json") instanceof ArrayBuffer, true);
   assert.deepEqual(await gunzipJson(bucket.store.get("answers.json")), ["smile"]);
   assert.equal(
     bucket.metadata.get("answers.json").httpMetadata.contentType,
@@ -80,6 +82,41 @@ test("updateAnswers reads R2, fetches the NYT solution, and writes the new list"
   } finally {
     restoreFetch();
   }
+});
+
+test("manual scheduled endpoint runs the update handler", async () => {
+  const bucket = makeBucket({
+    "answers.json": await gzipJson(["smile"]),
+  });
+  const restoreFetch = stubFetch({
+    solution: "CLANG",
+  });
+
+  try {
+    const response = await worker.fetch(
+      new Request("https://example.test/debug/scheduled", {
+        method: "POST",
+      }),
+      {
+        ANSWERS_BUCKET: bucket,
+        ANSWERS_KEY: "answers.json",
+        WORDLE_TIME_ZONE: "UTC",
+      },
+    );
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(await gunzipJson(bucket.store.get("answers.json")), ["smile", "clang"]);
+    assert.equal((await response.json()).result.added, true);
+  } finally {
+    restoreFetch();
+  }
+});
+
+test("manual scheduled endpoint rejects non-POST requests", async () => {
+  const response = await worker.fetch(new Request("https://example.test/debug/scheduled"), {});
+
+  assert.equal(response.status, 405);
+  assert.equal(response.headers.get("allow"), "POST");
 });
 
 function makeBucket(initialObjects = {}) {
