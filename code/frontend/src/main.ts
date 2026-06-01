@@ -1,7 +1,7 @@
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { getI18n } from './i18n';
 import './style.css';
-
+// DICTIONARY_URL は環境変数から取得
 type DictionaryPayload = Record<string, number> | string[];
 
 const DEFAULT_PATTERN = '^.....$';
