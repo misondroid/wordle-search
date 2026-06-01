@@ -8,6 +8,14 @@ const DEFAULT_PATTERN = '^.....$';
 const LANGUAGE_STORAGE_KEY = 'word-search-language';
 const RESULT_PAGE_SIZE = 100;
 
+const getDictionaryUrl = () => {
+  const dictionaryUrl = import.meta.env.VITE_DICTIONARY_URL;
+  if (dictionaryUrl) {
+    return new URL(dictionaryUrl);
+  }
+  return 'base_dictionary.json';
+};
+
 const getInitialLocale = () =>
   window.localStorage.getItem(LANGUAGE_STORAGE_KEY) || navigator.language;
 
@@ -344,13 +352,16 @@ loadObserver.observe(loadSentinel);
 
 const loadDictionary = async () => {
   try {
-    const response = await fetch('base_dictionary.json');
+    let dictionaryUrl = getDictionaryUrl();
+    console.log("dictionaryUrl=", dictionaryUrl.origin);
+    const response = await fetch(dictionaryUrl);
     if (!response.ok) {
       throw new Error(copy.dictionaryLoadFailedStatus(response.status));
     }
 
     const dictionary = (await response.json()) as DictionaryPayload;
     words = normalizeDictionary(dictionary);
+    console.log("got words=", words.length);
     runSearch();
   } catch (error) {
     resultsTitle.textContent = copy.dictionaryLoadFailedTitle;

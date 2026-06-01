@@ -7,7 +7,7 @@ services:
       - 3000:3000
     environment:
       - NODE_ENV=development
-      - DICTIONARY_URL=${DICTIONARY_URL:-base_dictionary.json}
+      - VITE_DICTIONARY_URL=${DICTIONARY_URL:-base_dictionary.json}
     volumes:
       - ./code/frontend:/app
       - /app/node_modules
