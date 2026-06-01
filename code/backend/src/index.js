@@ -1,8 +1,45 @@
 const DEFAULT_ANSWERS_KEY = "answers.json";
 const DEFAULT_TIME_ZONE = "America/New_York";
+const MANUAL_SCHEDULED_PATH = "/debug/scheduled";
 const WORDLE_API_BASE_URL = "https://www.nytimes.com/svc/wordle/v2";
 
 export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    if (url.pathname !== MANUAL_SCHEDULED_PATH) {
+      return jsonResponse(
+        {
+          error: "Not found",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    if (request.method !== "POST") {
+      return jsonResponse(
+        {
+          error: "Method not allowed",
+        },
+        {
+          status: 405,
+          headers: {
+            allow: "POST",
+          },
+        },
+      );
+    }
+
+    const result = await updateAnswers(env, Date.now());
+
+    return jsonResponse({
+      ok: true,
+      result,
+    });
+  },
+
   async scheduled(controller, env, ctx) {
     ctx.waitUntil(updateAnswers(env, controller.scheduledTime));
   },
@@ -121,6 +158,16 @@ function getAnswersBucket(env) {
 
 function gzipString(value) {
   return new Response(value).body.pipeThrough(new CompressionStream("gzip"));
+}
+
+function jsonResponse(payload, init = {}) {
+  const headers = new Headers(init.headers);
+  headers.set("content-type", "application/json; charset=utf-8");
+
+  return new Response(`${JSON.stringify(payload)}\n`, {
+    ...init,
+    headers,
+  });
 }
 
 async function readGzipJson(object) {
