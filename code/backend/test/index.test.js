@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  appendAnswer,
   getDateStringForTimeZone,
   readAnswers,
+  removeAnswer,
   updateAnswers,
   writeAnswers,
 } from "../src/index.js";
@@ -34,9 +34,9 @@ test("readAnswers rejects invalid JSON shapes", async () => {
   await assert.rejects(() => readAnswers(bucket), /must contain a JSON array/);
 });
 
-test("appendAnswer avoids duplicate answers", () => {
-  assert.deepEqual(appendAnswer(["smile"], "smile"), ["smile"]);
-  assert.deepEqual(appendAnswer(["smile"], "clang"), ["smile", "clang"]);
+test("removeAnswer removes the solved word from candidate answers", () => {
+  assert.deepEqual(removeAnswer(["smile", "clang"], "smile"), ["clang"]);
+  assert.deepEqual(removeAnswer(["smile"], "clang"), ["smile"]);
 });
 
 test("writeAnswers stores GZip JSON with application/json metadata", async () => {
@@ -55,7 +55,7 @@ test("writeAnswers stores GZip JSON with application/json metadata", async () =>
 
 test("updateAnswers reads R2, fetches the NYT solution, and writes the new list", async () => {
   const bucket = makeBucket({
-    "answers.json": await gzipJson(["smile"]),
+    "answers.json": await gzipJson(["smile", "clang"]),
   });
   const restoreFetch = stubFetch({
     solution: "CLANG",
@@ -71,13 +71,13 @@ test("updateAnswers reads R2, fetches the NYT solution, and writes the new list"
       Date.parse("2026-05-29T10:00:00.000Z"),
     );
 
-    assert.deepEqual(await gunzipJson(bucket.store.get("answers.json")), ["smile", "clang"]);
+    assert.deepEqual(await gunzipJson(bucket.store.get("answers.json")), ["smile"]);
     assert.deepEqual(result, {
       key: "answers.json",
       date: "2026-05-29",
       solution: "clang",
-      added: true,
-      total: 2,
+      removed: true,
+      total: 1,
     });
   } finally {
     restoreFetch();
@@ -86,7 +86,7 @@ test("updateAnswers reads R2, fetches the NYT solution, and writes the new list"
 
 test("manual scheduled endpoint runs the update handler", async () => {
   const bucket = makeBucket({
-    "answers.json": await gzipJson(["smile"]),
+    "answers.json": await gzipJson(["smile", "clang"]),
   });
   const restoreFetch = stubFetch({
     solution: "CLANG",
@@ -105,8 +105,8 @@ test("manual scheduled endpoint runs the update handler", async () => {
     );
 
     assert.equal(response.status, 200);
-    assert.deepEqual(await gunzipJson(bucket.store.get("answers.json")), ["smile", "clang"]);
-    assert.equal((await response.json()).result.added, true);
+    assert.deepEqual(await gunzipJson(bucket.store.get("answers.json")), ["smile"]);
+    assert.equal((await response.json()).result.removed, true);
   } finally {
     restoreFetch();
   }
