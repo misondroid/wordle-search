@@ -1,0 +1,34 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wordle-search-backend",
+  "main": "src/index.js",
+  "compatibility_date": "2026-05-30",
+  "triggers": {
+    "crons": ["0 10 * * *"]
+  },
+  "r2_buckets": [
+    {
+      "binding": "ANSWERS_BUCKET",
+      "bucket_name": "wordle-search"
+    }
+  ],
+  "vars": {
+    "ANSWERS_KEY": "assets/words.json.gz",
+    "WORDLE_TIME_ZONE": "America/New_York"
+  },
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
+  }
+}

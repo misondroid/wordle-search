@@ -1,0 +1,30 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: services/app/Dockerfile
+    ports:
+      - 3000:3000
+    environment:
+      - NODE_ENV=development
+      - VITE_DICTIONARY_URL=${DICTIONARY_URL:-base_dictionary.json}
+      - VITE_GTAG_ID=${GTAG_ID:-G-8CT26TE3Y6}
+    volumes:
+      - ./code/frontend:/app
+      - /app/node_modules
+    working_dir: /app
+    command: npm run dev
+  backend:
+    build:
+      context: .
+      dockerfile: services/backend/Dockerfile
+    ports:
+      - 3001:8787
+    environment:
+      - CLOUDFLARE_ACCOUNT_ID=
+      - WRANGLER_SEND_METRICS=false
+    volumes:
+      - ./code/backend:/app
+      - /app/node_modules
+    working_dir: /app
+    command: npm run dev
