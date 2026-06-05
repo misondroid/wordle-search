@@ -30,13 +30,6 @@ if (!app) {
 document.documentElement.lang = copy.lang;
 
 app.innerHTML = `
-  <script async src="https://www.googletagmanager.com/gtag/js?id=${import.meta.env.VITE_GTAG_ID}"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', '${import.meta.env.VITE_GTAG_ID}');
-  </script>
   <main class="shell" aria-live="polite">
     <section class="hero" aria-labelledby="page-title">
       <div class="hero-header">
