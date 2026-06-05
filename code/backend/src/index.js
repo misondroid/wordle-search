@@ -53,7 +53,7 @@ export async function updateAnswers(env, scheduledTime = Date.now()) {
 
   const answers = await readAnswers(bucket, key);
   const solution = await fetchSolution(date);
-  const nextAnswers = appendAnswer(answers, solution);
+  const nextAnswers = removeAnswer(answers, solution);
 
   await writeAnswers(bucket, key, nextAnswers);
 
@@ -61,7 +61,7 @@ export async function updateAnswers(env, scheduledTime = Date.now()) {
     key,
     date,
     solution,
-    added: nextAnswers.length !== answers.length,
+    removed: nextAnswers.length !== answers.length,
     total: nextAnswers.length,
   };
 }
@@ -127,12 +127,8 @@ export async function fetchSolution(date) {
   return payload.solution.toLowerCase();
 }
 
-export function appendAnswer(answers, answer) {
-  if (answers.includes(answer)) {
-    return answers;
-  }
-
-  return [...answers, answer];
+export function removeAnswer(answers, answer) {
+  return answers.filter((candidate) => candidate !== answer);
 }
 
 export async function writeAnswers(bucket, key = DEFAULT_ANSWERS_KEY, answers) {

@@ -144,3 +144,4 @@ vite.config.ts.timestamp-*
 
 inventories/
 task.md
+.env
