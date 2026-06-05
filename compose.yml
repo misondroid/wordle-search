@@ -8,6 +8,7 @@ services:
     environment:
       - NODE_ENV=development
       - VITE_DICTIONARY_URL=${DICTIONARY_URL:-base_dictionary.json}
+      - VITE_GTAG_ID=${GTAG_ID:-G-8CT26TE3Y6}
     volumes:
       - ./code/frontend:/app
       - /app/node_modules
