@@ -57,15 +57,23 @@ test("updateAnswers reads R2, fetches the NYT solution, and writes the new list"
   const bucket = makeBucket({
     "answers.json": await gzipJson(["smile", "clang"]),
   });
-  const restoreFetch = stubFetch({
-    solution: "CLANG",
-  });
+  const fetchStub = stubFetch([
+    {
+      payload: {
+        solution: "CLANG",
+      },
+    },
+    {
+      payload: {},
+    },
+  ]);
 
   try {
     const result = await updateAnswers(
       {
         ANSWERS_BUCKET: bucket,
         ANSWERS_KEY: "answers.json",
+        LINE_MESSAGING_API_TOKEN: "line-token",
         WORDLE_TIME_ZONE: "UTC",
       },
       Date.parse("2026-05-29T10:00:00.000Z"),
@@ -79,8 +87,26 @@ test("updateAnswers reads R2, fetches the NYT solution, and writes the new list"
       removed: true,
       total: 1,
     });
+    assert.equal(fetchStub.calls[1].input, "https://api.line.me/v2/bot/message/broadcast");
+    assert.equal(fetchStub.calls[1].init.method, "POST");
+    assert.equal(fetchStub.calls[1].init.headers.authorization, "Bearer line-token");
+    assert.deepEqual(JSON.parse(fetchStub.calls[1].init.body), {
+      messages: [
+        {
+          type: "text",
+          text: [
+            "Wordle answers update completed.",
+            "date: 2026-05-29",
+            "solution: clang",
+            "removed: true",
+            "total: 1",
+            "key: answers.json",
+          ].join("\n"),
+        },
+      ],
+    });
   } finally {
-    restoreFetch();
+    fetchStub.restore();
   }
 });
 
@@ -88,9 +114,16 @@ test("manual scheduled endpoint runs the update handler", async () => {
   const bucket = makeBucket({
     "answers.json": await gzipJson(["smile", "clang"]),
   });
-  const restoreFetch = stubFetch({
-    solution: "CLANG",
-  });
+  const fetchStub = stubFetch([
+    {
+      payload: {
+        solution: "CLANG",
+      },
+    },
+    {
+      payload: {},
+    },
+  ]);
 
   try {
     const response = await worker.fetch(
@@ -100,6 +133,7 @@ test("manual scheduled endpoint runs the update handler", async () => {
       {
         ANSWERS_BUCKET: bucket,
         ANSWERS_KEY: "answers.json",
+        LINE_MESSAGING_API_TOKEN: "line-token",
         WORDLE_TIME_ZONE: "UTC",
       },
     );
@@ -108,7 +142,7 @@ test("manual scheduled endpoint runs the update handler", async () => {
     assert.deepEqual(await gunzipJson(bucket.store.get("answers.json")), ["smile"]);
     assert.equal((await response.json()).result.removed, true);
   } finally {
-    restoreFetch();
+    fetchStub.restore();
   }
 });
 
@@ -164,18 +198,43 @@ async function gunzipJson(value) {
   return new Response(stream).json();
 }
 
-function stubFetch(payload, ok = true, status = 200) {
+function stubFetch(responses, ok = true, status = 200) {
   const originalFetch = globalThis.fetch;
+  const calls = [];
+  const pendingResponses = Array.isArray(responses)
+    ? [...responses]
+    : [
+        {
+          payload: responses,
+          ok,
+          status,
+        },
+      ];
 
-  globalThis.fetch = async () => ({
-    ok,
-    status,
-    async json() {
-      return payload;
+  globalThis.fetch = async (input, init = {}) => {
+    calls.push({
+      input,
+      init,
+    });
+
+    const response = pendingResponses.shift();
+    if (!response) {
+      throw new Error("Unexpected fetch call");
+    }
+
+    return {
+      ok: response.ok ?? true,
+      status: response.status ?? 200,
+      async json() {
+        return response.payload ?? {};
+      },
+    };
+  };
+
+  return {
+    calls,
+    restore() {
+      globalThis.fetch = originalFetch;
     },
-  });
-
-  return () => {
-    globalThis.fetch = originalFetch;
   };
 }
