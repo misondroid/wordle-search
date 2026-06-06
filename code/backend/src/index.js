@@ -1,5 +1,6 @@
 const DEFAULT_ANSWERS_KEY = "answers.json";
 const DEFAULT_TIME_ZONE = "America/New_York";
+const LINE_BROADCAST_URL = "https://api.line.me/v2/bot/message/broadcast";
 const MANUAL_SCHEDULED_PATH = "/debug/scheduled";
 const WORDLE_API_BASE_URL = "https://www.nytimes.com/svc/wordle/v2";
 
@@ -57,13 +58,17 @@ export async function updateAnswers(env, scheduledTime = Date.now()) {
 
   await writeAnswers(bucket, key, nextAnswers);
 
-  return {
+  const result = {
     key,
     date,
     solution,
     removed: nextAnswers.length !== answers.length,
     total: nextAnswers.length,
   };
+
+  await broadcastProcessingResult(env, result);
+
+  return result;
 }
 
 export function getDateStringForTimeZone(date, timeZone = DEFAULT_TIME_ZONE) {
@@ -140,6 +145,50 @@ export async function writeAnswers(bucket, key = DEFAULT_ANSWERS_KEY, answers) {
       contentEncoding: "gzip",
     },
   });
+}
+
+async function broadcastProcessingResult(env, result) {
+  const token = getLineMessagingApiToken(env);
+  const response = await fetch(LINE_BROADCAST_URL, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      messages: [
+        {
+          type: "text",
+          text: formatProcessingResult(result),
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to broadcast processing result to LINE: ${response.status}`);
+  }
+}
+
+function formatProcessingResult(result) {
+  return [
+    "Wordle answers update completed.",
+    `date: ${result.date}`,
+    `solution: ${result.solution}`,
+    `removed: ${result.removed}`,
+    `total: ${result.total}`,
+    `key: ${result.key}`,
+  ].join("\n");
+}
+
+function getLineMessagingApiToken(env) {
+  const token = env.LINE_MESSAGING_API_TOKEN;
+
+  if (typeof token !== "string" || token.length === 0) {
+    throw new Error("LINE_MESSAGING_API_TOKEN is required");
+  }
+
+  return token;
 }
 
 function getAnswersBucket(env) {
