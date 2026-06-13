@@ -147,3 +147,4 @@ files
 task.md
 .env
 .wrangler
+__pycache__
