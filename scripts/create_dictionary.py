@@ -102,15 +102,8 @@ def get_answer_data_from_file(file_path: str) -> dict:
         return json.load(f)
 
 def build_answer_list(answer_data: dict) -> list:
-    answer_list = []
-    if Path(args.answers_file).exists(): # 回答ファイルが存在する場合
-        answer_data = get_answer_data_from_file(args.answers_file)
-        for answer in answer_data:
-             answer_list.append(Answer(solution=answer["solution"], print_date=answer["print_date"]))
-    else: # 回答ファイルが存在しない場合
-        print(f"回答ファイルが存在しないので、公式アーカイブから回答を取得します")
-        # for answer in answer_data:
-        #     answer_list.append(Answer(answer["id"], answer["solution"], answer["print_date"], answer["days_since_launch"]))
+    print('build_answer_list():spawn')
+    answer_list =[]
     return answer_list
 
 def load_dictionary()-> dict:
@@ -121,7 +114,7 @@ def load_dictionary()-> dict:
     else:
         print("辞書ファイルが見つかりません")
         data = get_dictionary_from_url()
-    return [_ for _ in data if len(_) == 5]
+    return shrink_word_list(data)
 
 
 def get_dictionary_from_url() -> dict:
@@ -134,6 +127,18 @@ def get_dictionary_from_url() -> dict:
         print(f"辞書取得に失敗しました: {e}")
         return {}
 
+def shrink_word_list(word_list: list) -> list:
+    word_list = word_list.keys()
+    return [word for word in word_list if len(word) == 5]
+
+def save_word_list(word_list: list, file_path: str, encoding: str = 'utf-8', 
+                    gzip: bool = False) -> None:
+    if gzip:
+        with gzip.open(file_path, 'wt', encoding=encoding) as f:
+            json.dump(word_list, f)
+    else:
+        with open(file_path, 'w', encoding=encoding) as f:
+            json.dump(word_list, f)
 def main():
     if args.command == "create":
         answer_list = build_answer_list({})
@@ -144,15 +149,22 @@ def main():
             if answer.solution not in dictionary:
                 dictionary[answer.solution] = answer.print_date
         print(f'{len(dictionary)} words found')
-        with gzip.open(args.output_file, 'wt', encoding='utf-8') as f:
-            json.dump(dictionary, f)
+        save_word_list(dictionary, args.output_file, gzip=True)
         print(f'{args.output_file} created')
     elif args.command == "download":
-        download_dictionary()
+        dictionary_file = Path(args.dictionary_file)
+        if dictionary_file.exists():
+            print(f'{args.dictionary_file} already exists')
+            return
+        save_word_list(shrink_word_list(get_dictionary_from_url()), dictionary_file)
+        print(f'{args.dictionary_file} created')
     elif args.command == "pull":
-        pull_answers()
+        answer_list = build_answer_list({})
+        print(f'{len(answer_list)} answers found')
+
 #`コマンドライン実行の時の実行シーケンス`
 if __name__ == "__main__":
     args = parse_args()
     logger = prepare_logger(args)
+
     main()
