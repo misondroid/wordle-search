@@ -22,11 +22,15 @@ class Answer:
         self.solution = solution
         self.print_date = print_date
 
+# 自分自身のスクリプト名を取得
+def get_self_script_name():
+    return Path(__file__).stem
+
 
 
 # loggerの設定
 def prepare_logger(args):
-    logger = getLogger("create_word_list")
+    logger = getLogger(get_self_script_name())
     handler = FileHandler(args.log_file)
     handler.setFormatter(Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(handler)
