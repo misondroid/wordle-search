@@ -167,7 +167,7 @@ def build_answer_list(start_date: str, end_date: str) -> list:
         if not answer:
             continue
         logger.info(f'build_answer_list():got -> {answer.to_dict()}')
-        answer_list.append(answer.to_dict_date_key())
+        answer_list.extend(answer)
         sleep(0.1)
         current_date -= timedelta(days=1)
     return answer_list

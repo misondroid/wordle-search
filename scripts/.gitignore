@@ -1,4 +1,3 @@
-words_dictionary.json*
-answers.json
-words.json.gz
 *.log
+*.gz
+*.json
